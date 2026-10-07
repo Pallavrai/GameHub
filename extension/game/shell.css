@@ -215,3 +215,5 @@ button.link { border: 0; background: none; color: var(--muted); text-decoration:
   .m-end:not([hidden]) .m-trophy { animation: m-pop 420ms ease-out; }
 }
 @keyframes m-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.m-copy { min-height: 28px; padding: 0 10px; font-size: 13px; }
+.m-board b { min-width: 3ch; text-align: right; }

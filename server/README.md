@@ -16,8 +16,7 @@ Environment overrides (tests use them): `LOBBY_MS`, `GRACE_MS` (seat kept after 
 
 - GCP project `project-b323005a-fcb3-45ee-b4d` ("My First Project"). Never deploy into `pactsage`.
 - Cloud Run service `gamehub-snake` in `asia-south1` (Mumbai): `wss://gamehub-snake-733095730479.asia-south1.run.app`. v1.2.0+ clients use it.
-- The `us-central1` service of the same name runs v1.1.0 code for v1.1.0 clients. Delete it once nobody uses 1.1.0:
-  `gcloud run services delete gamehub-snake --region us-central1 --project project-b323005a-fcb3-45ee-b4d`
+- The old `us-central1` service (v1.1.0 clients) was deleted on 2026-10-07 at the owner's request, so v1.1.0 multiplayer no longer connects.
 - Firestore `(default)` database (Native, `asia-south1`). Collection `players/{sha256(player key)[0:32]}` holds `{ name, wins, points }`. Composite index on `players`: `wins` desc, `points` desc.
 - The runtime service account `733095730479-compute@developer.gserviceaccount.com` has `roles/run.builder` (needed for source deploys) and `roles/datastore.user`.
 

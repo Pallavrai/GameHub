@@ -184,6 +184,26 @@ await pp.goto(`chrome-extension://${id}/popup/index.html`);
 await pp.setViewportSize({ width: 300, height: 260 });
 await pp.screenshot({ path: `${S}/popup.png`, fullPage: true });
 
+// Multiplayer inside the real panel iframe (needs the live server): the copy button must reach the clipboard.
+const mp = await ctx.newPage();
+await mp.goto(`${base}/copy`);
+await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: base });
+await popupLaunch('/copy');
+await mp.bringToFront();
+await mp.waitForTimeout(300);
+const mf = mp.frames().find((fr) => fr.url().startsWith('chrome-extension://'));
+await mf.click('#multi');
+await mf.click('[data-act=create]');
+await mf.waitForSelector('[data-ref=code]:not(:empty)', { timeout: 30000 });
+const roomCode = await mf.textContent('[data-ref=code]');
+await mp.evaluate(() => navigator.clipboard.writeText('nothing yet'));
+await mf.click('[data-act=copy]');
+await mp.waitForTimeout(300);
+const copied = await mp.evaluate(() => navigator.clipboard.readText());
+check('panel copy button copies the room code', copied === roomCode, `clipboard="${copied}" code=${roomCode}`);
+check('copy shows visible feedback', /copied/i.test(await mf.textContent('[data-act=copy]')));
+await mf.click('[data-view=lobby] [data-act=leave]');
+
 console.log(results.join('\n'));
 console.log(`screenshots: ${S}`);
 await ctx.close();

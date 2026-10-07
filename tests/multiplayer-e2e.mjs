@@ -9,6 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 const require = createRequire(path.join(process.env.PLAYWRIGHT_DIR ?? process.cwd(), 'node_modules/'));
 const { chromium } = require('playwright');
+const WebSocket = createRequire(new URL('../server/package.json', import.meta.url))('ws');
 
 const EXT = new URL('../extension', import.meta.url).pathname;
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'gamehub-mp-'));
@@ -39,6 +40,27 @@ const open = async (setup) => {
   return page;
 };
 
+// A plain socket that watches the room, so steering can be checked against the server's own state.
+const observe = (code) =>
+  new Promise((ok) => {
+    const ws = new WebSocket(url.startsWith('chrome-extension') ? 'wss://gamehub-snake-733095730479.asia-south1.run.app' : 'ws://localhost:8787', { origin: 'http://localhost' });
+    ws.last = null;
+    ws.on('message', (d) => {
+      const m = JSON.parse(d);
+      if (m.t === 'state') ws.last = m;
+    });
+    ws.on('open', () => ok(ws, ws.send(JSON.stringify({ t: 'watch', code }))));
+  });
+const dirOf = async (obs, name, want) => {
+  for (let i = 0; i < 40; i++) {
+    const p = obs.last?.players.find((x) => x.name === name);
+    const dir = obs.last?.snakes.find((x) => x.id === p?.id)?.dir;
+    if (dir === want) return dir;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  return 'never';
+};
+
 try {
   // Single-player is fully offline: no requests to the game server, even with the network off.
   if (!process.env.GAME_URL) {
@@ -65,12 +87,20 @@ try {
   const guest = await open((page) => page.routeWebSocket(SERVER, (ws) => routes.push({ ws, server: ws.connectToServer() })));
 
   await host.click('#multi');
+  await host.click('[data-view=start] [data-act=global]');
+  await host.waitForFunction(() => !/Loading/.test(document.querySelector('[data-ref=globalList]').textContent), null, { timeout: 15000 });
+  check('Global leaderboard opens from the multiplayer menu', await host.isVisible('[data-view=global]'));
+  await host.click('[data-act=closeGlobal]');
+  check('Back from it returns to the menu', await host.isVisible('[data-view=start]'));
   await host.click('[data-act=create]');
   await host.waitForSelector('[data-ref=code]:not(:empty)', { timeout: 30000 });
   const code = await host.textContent('[data-ref=code]');
   check('host creates a room', /^[A-Z0-9]{5}$/.test(code), code);
   await host.fill('#m-name', 'Host');
   await host.click('.m-join .primary');
+  await host.click('[data-act=copy]');
+  const copyMsg = await host.waitForFunction(() => document.querySelector('[data-act=copy]').textContent === 'Copied!' || document.querySelector('[data-ref=status]').textContent, null, { timeout: 3000 }).then((h) => h.jsonValue(), () => 'no response');
+  check('Copy button confirms', copyMsg === true, String(copyMsg));
 
   await guest.click('#multi');
   await guest.fill('#m-code', code.toLowerCase());
@@ -78,19 +108,32 @@ try {
   await guest.waitForSelector('.m-swatch');
   check("host's colour is disabled for the guest", await guest.isDisabled('.m-swatch input[value=green]'));
   await guest.fill('#m-name', 'Guest');
+  await guest.click('.m-swatch:has(input[value=violet])');
   await guest.click('.m-join .primary');
   await host.waitForFunction(() => document.querySelectorAll('[data-ref=lobbyPlayers] li').length === 2);
   const seats = await host.textContent('[data-ref=countdown]');
   check('lobby shows seats used of the board cap', /^2\/6 players · auto-start in [0-5]:\d\d/.test(seats), seats);
   check('guest has no Start button', await guest.isHidden('[data-act=start]'));
+  const guestDot = await host.$eval('[data-ref=lobbyPlayers] li:nth-child(2) .m-dot', (d) => d.style.background);
+  check('picked colour is the one used', guestDot === 'rgb(181, 140, 255)', guestDot);
+  const obs = await observe(code);
   await guest.screenshot({ path: `${SHOTS}/mp-join.png` });
   await host.screenshot({ path: `${SHOTS}/mp-lobby.png` });
 
   await host.click('[data-act=start]');
   await guest.waitForSelector('[data-view=game]:not([hidden])');
-  await guest.keyboard.press('ArrowUp'); // two quick taps inside one tick: both must count
+  await guest.click('[data-dir=up]');
+  check('D-pad up steers', (await dirOf(obs, 'Guest', 'up')) === 'up');
+  await guest.click('[data-dir=left]');
+  check('D-pad left steers', (await dirOf(obs, 'Guest', 'left')) === 'left');
+  await guest.click('[data-dir=down]');
+  check('D-pad down steers', (await dirOf(obs, 'Guest', 'down')) === 'down');
+  await guest.click('[data-dir=right]');
+  check('D-pad right steers', (await dirOf(obs, 'Guest', 'right')) === 'right');
+  await guest.keyboard.press('w'); // two quick taps inside one tick: both must count
   await guest.keyboard.press('ArrowRight');
-  await guest.waitForTimeout(700);
+  check('keyboard double tap: both turns apply', (await dirOf(obs, 'Guest', 'up')) === 'up' && (await dirOf(obs, 'Guest', 'right')) === 'right');
+  await guest.waitForTimeout(300);
   check('scoreboard lists both players', (await guest.$$('[data-ref=scoreboard] li')).length === 2);
   await guest.screenshot({ path: `${SHOTS}/mp-playing.png` });
 
@@ -119,7 +162,24 @@ try {
   await host.screenshot({ path: `${SHOTS}/mp-global.png` });
   await host.click('[data-act=closeGlobal]');
   check('Back returns to the room results', await host.isVisible('[data-view=end]'));
-  await host.click('[data-view=end] [data-act=leave]');
+
+  await host.click('[data-act=rematch]');
+  await host.waitForSelector('[data-view=lobby]:not([hidden])');
+  check('Rematch reopens the lobby with a fresh countdown', /auto-start in [45]:\d\d/.test(await host.textContent('[data-ref=countdown]')));
+  const late = await open();
+  await late.click('#multi');
+  await late.fill('#m-code', code);
+  await late.click('[data-act=watch] button');
+  await late.waitForSelector('.m-swatch');
+  await late.fill('#m-name', 'Late');
+  await late.click('.m-join .primary');
+  await host.waitForFunction(() => document.querySelectorAll('[data-ref=lobbyPlayers] li').length === 2);
+  await host.click('[data-view=lobby] [data-act=leave]');
+  check('Leave room returns to the menu', await host.isVisible('[data-view=start]'));
+  await late.waitForSelector('[data-act=start]:not([hidden])');
+  check('host role passes to the next player', true);
+  await late.click('[data-view=lobby] [data-act=leave]');
+  obs.close();
   await host.click('[data-act=back]');
   check('back to single player', (await host.textContent('#primary')) === 'Play single');
 } catch (e) {

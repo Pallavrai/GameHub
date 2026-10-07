@@ -6,7 +6,7 @@ export const SIZE = 24;
 export const COLORS = ['green', 'coral', 'sky', 'yellow', 'violet', 'orange', 'pink', 'teal'];
 // One 4-row lane per snake keeps spawns apart, so the board size sets the cap (24 → 6 players).
 export const MAX_PLAYERS = Math.min(COLORS.length, Math.floor(SIZE / 4));
-const QUEUE = 3; // buffered turns: quick double-taps inside one tick both count
+const QUEUE = 2; // a quick double-tap inside one tick counts; more would replay stale presses later
 const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' };
 

@@ -91,3 +91,11 @@ The user asked to use Vercel instead of GCP if possible, to stay free. Vercel's 
 - **Auto-reconnect**: each connection gets a session with a private resume token. A dropped player keeps their seat, host role and snake for 20 s (`GRACE_MS`); the snake keeps moving, matching the "away" rule. Cloud Run's 1 h socket limit is handled by the same reconnect.
 - **Global leaderboard** (supersedes "per room only"): Firestore `(default)` in asia-south1, `players/{sha256(playerKey)[0:32]} = { name, wins, points }`, ordered by wins then points through a composite index. A random per-profile key avoids accounts, and the hash keeps it private. `GET /leaderboard` is served from a 30 s cache, so public reads can't drive up Firestore reads. Only matches of 15 s or more count, which stops instant-forfeit farming. A match where one browser holds two seats isn't counted. Known limit: two Chrome profiles can still farm slowly; fixing that needs real accounts.
 - IAM in the game's project only: `roles/datastore.user` for the runtime service account.
+
+## 2026-10-07 — v1.2.1 fixes (user reports)
+
+- **Old us-central1 service deleted** on the owner's request; v1.1.0 multiplayer stops working.
+- **Copy button**: the panel iframe had `allow=""`, which blocks clipboard writes from the embedded game, and the failure was silent. Now `allow="clipboard-write"`, an `execCommand('copy')` fallback for sites whose Permissions-Policy blocks it, and a visible "Copied!".
+- **Jerky movement**: measured state arrivals on the live server ranged 73–248 ms against a 160 ms tick. Drawing on arrival made the snake double-step or stall. The client now spaces in-game states at least 0.75 × tick apart and catches up at once if more than two are waiting. Measured on screen: minimum 120 ms, median 161 ms. A late packet still shows as a short pause; hiding that needs a playout buffer, which adds delay to every move, so it wasn't done.
+- **No layout jumps**: the scoreboard moved below the board and keeps join order (live rank reshuffled chips every tick). Status text moved to the bottom; during a match the reconnect notice uses the on-board banner.
+- **Turn queue 3 → 2**: a third buffered press replayed stale turns well after the key press, which felt like sudden movement.

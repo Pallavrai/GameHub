@@ -58,6 +58,7 @@ function snapshot(room) {
     phase: room.phase,
     host: room.hostId,
     max: MAX_PLAYERS,
+    tick: TICK_MS,
     endsIn: room.deadline ? Math.max(0, room.deadline - Date.now()) : null,
     size: SIZE,
     winner: room.winner,

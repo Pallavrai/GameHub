@@ -131,3 +131,13 @@ Bugs found and fixed by this run: panel rendered off-screen (`all: initial !impo
 | Reconnect on a real flaky network (Wi-Fi switch, laptop sleep) | NOT TESTED | Only a forced socket cut was tested |
 
 Note: while cleaning up the test revision, live traffic briefly (about 2 min) pointed at it. Logs show only the two test sockets reached it, and the real `players` collection stayed empty. The correct cleanup order is now in `server/README.md`.
+
+## v1.2.1 — 2026-10-07
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Copy button inside the real panel iframe on a web page (clipboard read back) | FAIL before the fix (clipboard unchanged) → PASS | `tests/e2e.mjs` (30/30) |
+| Every multiplayer control: Global from menu and results, Back, Create, Join by code, colour pick, Copy, Join, Start, all four D-pad buttons and keyboard (checked against the server's state by a watching socket), double tap, reconnect, results, Rematch, Leave in lobby, host handover, back to single player | PASS (27/27, live asia-south1) | `tests/multiplayer-e2e.mjs` |
+| On-screen step timing during a live match (guest page, 15 s) | min 120 / median 161 / max 221 ms, no steps under 100 ms (raw arrivals: min 77 ms) | `smooth.mjs` (session scratch) |
+| Server tests | PASS (13) | `server/server.test.js` |
+| us-central1 service deleted; only asia-south1 remains | PASS | `gcloud run services list` |

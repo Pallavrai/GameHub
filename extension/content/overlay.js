@@ -61,7 +61,7 @@
           <button class="min" aria-label="Minimize game">${icon('<path d="M5 16H19"/>')}</button>
           <button class="close" aria-label="Close game">${icon('<path d="M6 6L18 18M18 6L6 18"/>')}</button>
         </div>
-        <iframe allow=""></iframe>
+        <iframe allow="clipboard-write"></iframe>
       </div>
       <button class="chip" hidden>${icon('<rect x="5" y="5" width="14" height="14" rx="2"/><path d="M5 9H19"/>')}<span></span></button>`;
     panel = root.querySelector('.panel');

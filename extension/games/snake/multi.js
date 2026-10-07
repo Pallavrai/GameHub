@@ -21,7 +21,6 @@ const MEDAL = ['#FFD25B', '#C9D6E2', '#E0A070'];
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 const TEMPLATE = `
-<p class="m-status" data-ref="status" role="status"></p>
 
 <section class="m-view" data-view="start">
   <h2>Multiplayer</h2>
@@ -38,7 +37,7 @@ const TEMPLATE = `
 <section class="m-view" data-view="lobby" hidden>
   <div class="m-code">
     <span>Room</span><b data-ref="code"></b>
-    <button class="icon" data-act="copy" aria-label="Copy room code" title="Copy code">⧉</button>
+    <button class="m-copy" data-act="copy" data-ref="copyBtn" aria-label="Copy room code">Copy</button>
   </div>
   <p class="m-muted" data-ref="countdown" aria-live="off"></p>
   <ul class="m-players" data-ref="lobbyPlayers"></ul>
@@ -58,11 +57,11 @@ const TEMPLATE = `
 </section>
 
 <section class="m-view" data-view="game" hidden>
-  <ul class="m-board" data-ref="scoreboard" aria-label="Scoreboard"></ul>
   <div class="stage">
     <canvas data-ref="canvas" role="img" aria-label="Multiplayer Snake board. Steer with arrow keys or W A S D."></canvas>
     <p class="m-banner" data-ref="banner" hidden></p>
   </div>
+  <ul class="m-board" data-ref="scoreboard" aria-label="Scoreboard"></ul>
   <div class="dpad" data-ref="dpad">
     ${['up', 'left', 'down', 'right'].map((d) => `<button class="dir dir-${d}" data-dir="${d}" aria-label="Turn ${d}"><img src="/assets/ui/arrow-${d}.svg" alt=""></button>`).join('')}
   </div>
@@ -87,6 +86,7 @@ const TEMPLATE = `
   <button class="link" data-act="closeGlobal">Back</button>
 </section>
 
+<p class="m-status" data-ref="status" role="status"></p>
 <p class="sr-only" data-ref="announce" aria-live="polite"></p>`;
 
 // mountMulti(container, { onExit }) → { destroy }
@@ -117,6 +117,10 @@ export function mountMulti(container, { onExit }) {
   let lastPhase = null;
   let aim = null; // { dir, at }: your latest steer, drawn on your head before the server's tick moves you
   let localKey;
+  const pending = []; // states waiting for their slot on screen
+  let paceTimer = 0;
+  let shownAt = 0;
+  let copiedTimer = 0;
 
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
@@ -178,6 +182,7 @@ export function mountMulti(container, { onExit }) {
     lostAt ||= Date.now();
     if (Date.now() - lostAt > GIVE_UP_MS) return giveUp('Lost connection to the room. Check your internet and join again.');
     status('Connection lost. Reconnecting…', true);
+    if (view === 'game') renderGame(state, state.players.find((p) => p.id === me));
     clearTimeout(retry);
     retry = setTimeout(() => connect({ t: 'resume', token }), Math.min(4000, 250 * 2 ** attempt++));
   }
@@ -206,13 +211,34 @@ export function mountMulti(container, { onExit }) {
       inRoom = true;
       if (lostAt || ref.status.textContent.startsWith('Connecting')) status();
       lostAt = attempt = 0;
-      render(msg);
+      pending.push(msg);
+      pace();
     } else if (msg.t === 'error') status(msg.msg, true);
     else if (msg.t === 'expired') giveUp('You were disconnected too long and lost your seat.');
     else if (msg.t === 'closed') giveUp(msg.reason === 'empty' ? '' : msg.reason);
   }
 
+  // Internet jitter delivers ticks 70–250 ms apart; drawn on arrival the snake stutters and double-steps.
+  // Space in-game ticks at least 3/4 of a tick apart, and catch up at once if more than two pile up.
+  function pace() {
+    clearTimeout(paceTimer);
+    while (pending.length) {
+      const next = pending[0];
+      const playing = next.phase === 'playing' && state?.phase === 'playing';
+      const wait = playing && pending.length < 3 ? shownAt + 0.75 * (next.tick ?? 160) - performance.now() : 0;
+      if (wait > 0) {
+        paceTimer = setTimeout(pace, wait);
+        return;
+      }
+      pending.shift();
+      shownAt = performance.now();
+      render(next);
+    }
+  }
+
   function reset() {
+    pending.length = 0;
+    clearTimeout(paceTimer);
     state = null;
     me = token = null;
     lastPhase = null;
@@ -303,9 +329,9 @@ export function mountMulti(container, { onExit }) {
     show('game');
     const snake = s.snakes.find((x) => x.id === me);
     if (aim && (snake?.dir === aim.dir || Date.now() - aim.at > 600)) aim = null;
-    const ranked = s.players.filter((p) => p.inRound).sort((a, b) => b.alive - a.alive || b.score - a.score);
+    // Join order, not live rank: chips that swap places every tick read as jitter.
     ref.scoreboard.replaceChildren(
-      ...ranked.map((p) => {
+      ...s.players.filter((p) => p.inRound).map((p) => {
         const li = el('li', p.alive ? '' : 'out');
         li.append(dot(p.color), el('span', 'm-name', p.name), el('b', '', String(p.score)));
         if (!p.alive) li.append(el('span', 'm-tag', p.gone ? 'left' : 'out'));
@@ -314,7 +340,8 @@ export function mountMulti(container, { onExit }) {
       }),
     );
     let banner = '';
-    if (!mine?.inRound) banner = 'Spectating: you can play next round';
+    if (lostAt) banner = 'Connection lost. Reconnecting…';
+    else if (!mine?.inRound) banner = 'Spectating: you can play next round';
     else if (!mine.alive) banner = "You're out, spectating";
     else if (away) banner = "You're away: your snake keeps moving!";
     ref.banner.textContent = banner;
@@ -446,6 +473,25 @@ export function mountMulti(container, { onExit }) {
     steer(dir);
   }
 
+  // The panel iframe allows clipboard-write; a site that blocks it falls back to the older copy command.
+  async function copyCode() {
+    const code = state?.code ?? '';
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {
+      const t = Object.assign(document.createElement('textarea'), { value: code });
+      root.append(t);
+      t.select();
+      const ok = document.execCommand('copy');
+      t.remove();
+      if (!ok) return status(`Couldn't copy. Select the code and press ${/Mac/.test(navigator.platform) ? '⌘' : 'Ctrl'}+C.`, true);
+    }
+    ref.copyBtn.textContent = 'Copied!';
+    ref.announce.textContent = 'Room code copied';
+    clearTimeout(copiedTimer);
+    copiedTimer = setTimeout(() => (ref.copyBtn.textContent = 'Copy'), 1500);
+  }
+
   function leave() {
     send({ t: 'leave' });
     giveUp('');
@@ -457,7 +503,7 @@ export function mountMulti(container, { onExit }) {
     const act = e.target.closest('button[data-act]')?.dataset.act;
     if (act === 'create') connect({ t: 'create' });
     else if (act === 'back') onExit();
-    else if (act === 'copy') navigator.clipboard?.writeText(state?.code ?? '').then(() => (ref.announce.textContent = 'Room code copied'), () => {});
+    else if (act === 'copy') copyCode();
     else if (act === 'start' || act === 'rematch') {
       status();
       send({ t: act });
@@ -506,6 +552,8 @@ export function mountMulti(container, { onExit }) {
     destroy() {
       clearInterval(clock);
       clearTimeout(retry);
+      clearTimeout(paceTimer);
+      clearTimeout(copiedTimer);
       send({ t: 'leave' }); // free the seat now instead of after the grace period
       hangUp();
       window.removeEventListener('keydown', onKey);
