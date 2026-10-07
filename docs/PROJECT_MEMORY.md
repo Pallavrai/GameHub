@@ -52,3 +52,7 @@ The user asked to continue building. Phases 1–3 of `../PLAN.md` are implemente
 ## 2026-10-07 multiplayer requirement
 
 The user asked for online multiplayer Snake. The rules are in the matching `DECISIONS.md` entry. Multiplayer needs network access to the GameHub server on GCP Cloud Run; single-player still works offline. Do not deploy into GCP project `pactsage`, which holds the user's existing app. Stay within the free-trial billing account.
+
+## 2026-10-07 v1.2.0 requirements
+
+Auto-reconnect; slower multiplayer; fix input lag; players capped by board size; a global leaderboard of wins and points; single-player must stay fully offline; side head hits knock out only the hitter, while head-on knocks out both. Where these live is recorded in `DECISIONS.md`. The GCP free trial stops the server when it ends unless the owner upgrades billing.

@@ -116,3 +116,18 @@ Bugs found and fixed by this run: panel rendered off-screen (`all: initial !impo
 | Single-player regression: `tests/e2e.mjs` after the multiplayer change | PASS (28/28) | Run 2026-10-07 |
 | Socket kept open past Cloud Run's 1 h timeout | NOT TESTED | Server closes rooms well before that in normal play |
 | Two real people on different machines | NOT TESTED | |
+
+## Multiplayer v1.2.0 — 2026-10-07
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Rules: wrap, body hit, head-on same cell and swap, side ram, side hit (most recent turner), same-tick side hit, turn queue, cap 6, lanes | PASS (10) | `server/server.test.js` |
+| Server: origin check, taken colour, host-only start, resume after a drop (same seat and snake, steer after resume), grace expiry → out, lapsed token refused, leaderboard ranks and hides raw keys, room full at 6, short match unranked, one browser in two seats unranked | PASS (3 process tests) | `server/server.test.js` |
+| Latency to the live server (app round trip, 15 samples, owner's Mac) | us-central1 302 ms median → asia-south1 42 ms | `rtt.mjs` run (session scratch) |
+| Live Firestore write path | PASS | No-traffic `e2e` revision writing to `e2e-players`: 2 docs, winner 1 win, hashed IDs; then reverted (see note) |
+| Real extension on live asia-south1, `tests/multiplayer-e2e.mjs` | PASS (15/15) | single-player offline + 0 server requests; offline multiplayer message; create, join, colour disabled, `2/6` seats, guest has no Start, double tap, connection cut → "Reconnecting" → same snake back, host sees "reconnecting", grace → host wins, global board loads, Back, back to single. `docs/verification/mp-*.png` |
+| Single-player regression `tests/e2e.mjs` | PASS (28/28) | Run on the v1.2.0 tree |
+| Two people on different machines and networks | NOT TESTED | |
+| Reconnect on a real flaky network (Wi-Fi switch, laptop sleep) | NOT TESTED | Only a forced socket cut was tested |
+
+Note: while cleaning up the test revision, live traffic briefly (about 2 min) pointed at it. Logs show only the two test sockets reached it, and the real `players` collection stayed empty. The correct cleanup order is now in `server/README.md`.

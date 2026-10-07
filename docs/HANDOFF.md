@@ -38,11 +38,11 @@ No service worker, read-max-write best score, fewer files. Reasons are in `DECIS
 
 `chrome://extensions` → Developer mode → Load unpacked → select `extension/`.
 
-## 2026-10-07 multiplayer (v1.1.0)
+## 2026-10-07 multiplayer (v1.2.0)
 
-- `server/`: `rules.js` holds the pure rules (wrap, collisions, head-on, food per live snake). `index.js` handles rooms, the lobby timer, host-only start/rematch, the origin check and pings. Tests: `cd server && npm test` (7 pass). Deploy command: `server/README.md`.
-- Live at `wss://gamehub-snake-733095730479.us-central1.run.app`: Cloud Run service `gamehub-snake` in project `project-b323005a-fcb3-45ee-b4d`, region us-central1, min 0 / max 1 instance. The default compute service account was granted `roles/run.builder` in that project only, because source deploys failed without it.
-- `extension/games/snake/multi.js`: create/join room, lobby (code, copy, player list, colour swatches with taken colours disabled, countdown), live scoreboard, away/out/spectating banners, winner leaderboard. `game/shell.js` swaps it in from the Ready overlay's "Play multiplayer" button.
-- On a localhost page, `multi.js` uses `ws://localhost:8787`. Port 8080 belongs to the user's Adminer container.
-- Vercel was evaluated and rejected; see `DECISIONS.md`.
-- Next: test with two people on different machines; consider auto-reconnect if Cloud Run drops sockets after the 1 h request timeout.
+- `server/`: `rules.js` holds the pure rules (wrap, body hits, head-on vs side hits, 3-turn input queue, 6-player cap from the board size). `index.js` handles rooms, sessions with resume tokens and a 20 s grace, host-only start/rematch, the 160 ms tick, the origin check, pings and `GET /leaderboard`. `stats.js` is the global leaderboard: Firestore on Cloud Run, in memory elsewhere. Tests: `cd server && npm test` (13 pass).
+- Live: Cloud Run `gamehub-snake` in **asia-south1**, `wss://gamehub-snake-733095730479.asia-south1.run.app`, with Firestore `(default)` in asia-south1. The `us-central1` service still runs v1.1.0 code for v1.1.0 clients; deletion command is in `server/README.md`. All GCP details and the safe live-test procedure are there too.
+- `extension/games/snake/multi.js`: lobby (code, seats used of the cap, colour swatches, countdown), auto-reconnect (backoff 0.25→4 s, gives up after 25 s, retries when the browser comes back online), the head turns on key press before the server tick, live scoreboard with "reconnecting" tags, results, and the global leaderboard view. Player identity is a random `playerKey` in `chrome.storage.local`; the last used name is `playerName`.
+- Single-player never loads `multi.js` and makes no requests (checked with the network off).
+- `tests/multiplayer-e2e.mjs`: Chrome check against the live server (default) or a localhost copy (`GAME_URL`).
+- Next: a two-machine match with real people; delete the us-central1 service once v1.1.0 is gone; consider a budget alert. When the GCP free trial ends, Google stops the service unless the billing account is upgraded.

@@ -16,16 +16,16 @@ Play a quick game of Snake while a website loads, uploads, or processes. Click t
 
 ## Download
 
-**[⬇ Download GameHub-1.1.0.zip](https://github.com/Pallavrai/GameHub/releases/latest/download/GameHub-1.1.0.zip)** · [all releases](https://github.com/Pallavrai/GameHub/releases)
+**[⬇ Download GameHub-1.2.0.zip](https://github.com/Pallavrai/GameHub/releases/latest/download/GameHub-1.2.0.zip)** · [all releases](https://github.com/Pallavrai/GameHub/releases)
 
 GameHub is not on the Chrome Web Store, so Chrome installs it in Developer mode (takes a minute).
 
 ## Install
 
-1. Download and unzip `GameHub-1.1.0.zip`. Move the `GameHub-1.1.0` folder somewhere permanent — Chrome loads it from that folder, so don't delete it.
+1. Download and unzip `GameHub-1.2.0.zip`. Move the `GameHub-1.2.0` folder somewhere permanent — Chrome loads it from that folder, so don't delete it.
 2. Open `chrome://extensions` in Chrome.
 3. Turn on **Developer mode** (top-right switch).
-4. Click **Load unpacked** and select the `GameHub-1.1.0` folder.
+4. Click **Load unpacked** and select the `GameHub-1.2.0` folder.
 5. Click the puzzle-piece icon in the toolbar and pin **GameHub**.
 
 Works in Chrome and other Chromium browsers (Edge, Brave, Arc) that support loading unpacked extensions.
@@ -49,10 +49,21 @@ Works in Chrome and other Chromium browsers (Edge, Brave, Arc) that support load
 ## Multiplayer
 
 1. **Play multiplayer** → **Create room**. Share the 5-letter room code.
-2. Friends choose **Play multiplayer**, enter the code, and pick a name and a snake colour. Colours already taken are crossed out.
+2. Friends choose **Play multiplayer**, enter the code, and pick a name and a snake colour. Colours already taken are crossed out. A room holds up to 6 players (the board's limit); anyone after that can watch.
 3. The host presses **Start**. If they forget, the game starts automatically after 5 minutes once 2 or more players have joined.
 
-Rules: the edges wrap around. Hit any snake (yours or someone else's) and you're out and watch the rest. If two heads collide, both snakes die; if they were the last two, they share #1. The last snake alive rules the room's leaderboard, and the host can start a rematch. In multiplayer, clicking away from the game does **not** pause it; your snake keeps moving.
+Rules:
+- The edges wrap around.
+- Run into any snake's body (yours or someone else's) and you're out; you watch the rest of the match.
+- Two heads meeting face to face (head-on) knock out both snakes. If they were the last two, they share #1.
+- Hitting another head from the side knocks out only the snake that did the hitting: the one that most recently turned onto that collision course.
+- The last snake alive rules the room's leaderboard, and the host can start a rematch.
+- Clicking away from the game does **not** pause it; your snake keeps moving.
+- If your connection drops, GameHub reconnects by itself. Your seat is kept for 20 seconds.
+
+**Global leaderboard**: most wins, then most points, across all multiplayer matches that last 15 seconds or more. Open it from the multiplayer menu or the results screen. Your entry is tied to this Chrome profile, not to your name. A match where one browser holds two seats isn't counted.
+
+Single-player is unchanged and never needs the internet.
 
 ## Good to know
 
@@ -63,7 +74,7 @@ Rules: the edges wrap around. Hit any snake (yours or someone else's) and you're
 
 ## Privacy
 
-GameHub has no account, ads, or analytics. Single-player makes no network requests. Multiplayer connects to the GameHub game server (Google Cloud Run) and sends only your room code, chosen name, colour, and steering; nothing is stored after the room closes. It only touches a page when you click Play on it (`activeTab`), and it never reads the page's content. Permissions: `activeTab`, `scripting`, `storage`.
+GameHub has no account, ads, or analytics. Single-player makes no network requests. Multiplayer connects to the GameHub game server (Google Cloud Run, Mumbai) and sends your room code, chosen name, colour, steering, and a random ID created on your computer. The global leaderboard stores only your latest name, wins, and points, filed under a one-way hash of that ID. Rooms themselves are forgotten when they close. It only touches a page when you click Play on it (`activeTab`), and it never reads the page's content. Permissions: `activeTab`, `scripting`, `storage`.
 
 ## For developers
 
@@ -79,6 +90,7 @@ docs/             plan, decisions, design, verification records
 ```sh
 node --test tests/*.test.mjs     # game rule tests
 (cd server && npm test)          # multiplayer rules and server tests
+node tests/multiplayer-e2e.mjs   # Chrome check (needs PLAYWRIGHT_DIR, CHROME_PATH; see file header)
 ./scripts/package.sh             # builds dist/GameHub-<version>.zip
 ```
 

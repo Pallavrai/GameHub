@@ -3,18 +3,35 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { WebSocketServer } from 'ws';
-import { SIZE, COLORS, startRound, turn, step, kill, aliveIds } from './rules.js';
+import { SIZE, COLORS, MAX_PLAYERS, startRound, turn, step, kill, aliveIds } from './rules.js';
+import { recordMatch, topPlayers } from './stats.js';
 
-const PORT = Number(process.env.PORT) || 8080;
-const TICK_MS = 130;
-const LOBBY_MS = Number(process.env.LOBBY_MS) || 5 * 60_000; // host forgot to press Start → auto-start
+const env = (name, fallback) => Number(process.env[name] ?? fallback);
+const PORT = env('PORT', 8080);
+const TICK_MS = 160;
+const LOBBY_MS = env('LOBBY_MS', 5 * 60_000); // host forgot to press Start → auto-start
 const ENDED_MS = 5 * 60_000; // no rematch → close the room so idle sockets don't keep the server billed
+const GRACE_MS = env('GRACE_MS', 20_000); // a dropped connection keeps its seat this long, so it can resume
+const RANKED_MS = env('RANKED_MS', 15_000); // shorter matches (instant forfeits) don't count on the global board
 const MAX_ROOMS = 200;
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 const rooms = new Map();
+const sessions = new Map(); // resume token → { id, token, ws, room, timer }
 
-const server = http.createServer((req, res) => res.writeHead(200, { 'content-type': 'text/plain' }).end('GameHub snake server\n'));
+const server = http.createServer(async (req, res) => {
+  if (new URL(req.url, 'http://x').pathname !== '/leaderboard') {
+    return res.writeHead(200, { 'content-type': 'text/plain' }).end('GameHub snake server\n');
+  }
+  const headers = { 'content-type': 'application/json', 'access-control-allow-origin': '*' };
+  try {
+    res.writeHead(200, headers).end(JSON.stringify({ top: await topPlayers() }));
+  } catch (e) {
+    console.error('leaderboard read failed:', e.message);
+    res.writeHead(503, headers).end('{"top":null}');
+  }
+});
+
 const wss = new WebSocketServer({
   server,
   maxPayload: 512,
@@ -22,7 +39,9 @@ const wss = new WebSocketServer({
   verifyClient: ({ origin }) => /^(chrome-extension:\/\/[a-p]{32}|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)$/.test(origin ?? ''),
 });
 
-const send = (ws, msg) => ws.readyState === ws.OPEN && ws.send(JSON.stringify(msg));
+const send = (s, msg) => s.ws?.readyState === 1 && s.ws.send(JSON.stringify(msg));
+const you = (s) => send(s, { t: 'you', id: s.id, token: s.token, colors: COLORS, max: MAX_PLAYERS });
+const seated = (room) => [...room.players.values()].filter((p) => !p.gone);
 
 function newCode() {
   let code;
@@ -37,7 +56,8 @@ function snapshot(room) {
     t: 'state',
     code: room.code,
     phase: room.phase,
-    host: room.host?.id ?? null,
+    host: room.hostId,
+    max: MAX_PLAYERS,
     endsIn: room.deadline ? Math.max(0, room.deadline - Date.now()) : null,
     size: SIZE,
     winner: room.winner,
@@ -48,6 +68,7 @@ function snapshot(room) {
       wins: p.wins,
       place: p.place,
       gone: Boolean(p.gone),
+      offline: !p.session.ws,
       score: r?.snakes[p.id]?.score ?? 0,
       alive: Boolean(r?.snakes[p.id]?.alive),
       inRound: Boolean(r?.snakes[p.id]),
@@ -59,7 +80,7 @@ function snapshot(room) {
 
 function broadcast(room) {
   const msg = JSON.stringify(snapshot(room));
-  for (const ws of room.clients) if (ws.readyState === ws.OPEN) ws.send(msg);
+  for (const s of room.members) if (s.ws?.readyState === 1) s.ws.send(msg);
 }
 
 function setDeadline(room, ms, fn) {
@@ -72,10 +93,12 @@ function closeRoom(room, reason) {
   clearTimeout(room.timer);
   clearInterval(room.loop);
   rooms.delete(room.code);
-  for (const ws of room.clients) {
-    send(ws, { t: 'closed', reason });
-    ws.room = null;
-    ws.close();
+  for (const s of room.members) {
+    send(s, { t: 'closed', reason });
+    s.room = null;
+    clearTimeout(s.timer);
+    if (s.ws) s.ws.close();
+    else sessions.delete(s.token);
   }
 }
 
@@ -99,6 +122,7 @@ function startMatch(room) {
   room.deadline = null;
   room.phase = 'playing';
   room.winner = null;
+  room.startedAt = Date.now();
   for (const p of room.players.values()) p.place = null;
   room.round = startRound([...room.players.keys()]);
   room.loop = setInterval(() => {
@@ -125,92 +149,129 @@ function placeDead(room, dead) {
     champ.wins += 1;
     room.winner = champ.id;
   }
+  if (Date.now() - room.startedAt >= RANKED_MS) rank(room);
   setDeadline(room, ENDED_MS, () => closeRoom(room, 'Room closed after 5 minutes without a rematch.'));
+}
+
+function rank(room) {
+  const rows = [...room.players.values()]
+    .filter((p) => p.statsId && room.round.snakes[p.id])
+    .map((p) => ({ id: p.statsId, name: p.name, points: room.round.snakes[p.id].score, win: p.id === room.winner ? 1 : 0 }));
+  // One browser in two windows (testing, or farming wins against yourself) plays fine but isn't ranked.
+  if (new Set(rows.map((r) => r.id)).size !== rows.length) return;
+  recordMatch(rows).catch((e) => console.error('leaderboard write failed:', e.message));
 }
 
 function cleanName(name) {
   return typeof name === 'string' ? name.replace(/[\p{C}]/gu, '').trim().slice(0, 16) : '';
 }
 
-function leave(ws) {
-  const room = ws.room;
+function leave(s) {
+  const room = s.room;
   if (!room) return;
-  ws.room = null;
-  room.clients.delete(ws);
-  if (room.players.has(ws.id)) {
-    if (room.phase === 'playing' && room.round.snakes[ws.id]?.alive) {
-      kill(room.round, ws.id);
-      placeDead(room, [ws.id]);
+  s.room = null;
+  clearTimeout(s.timer);
+  room.members.delete(s);
+  const p = room.players.get(s.id);
+  if (p) {
+    if (room.phase === 'playing' && room.round.snakes[p.id]?.alive) {
+      kill(room.round, p.id);
+      placeDead(room, [p.id]);
     }
     // Keep them on this match's leaderboard; openLobby drops them.
-    if (room.round?.snakes[ws.id]) room.players.get(ws.id).gone = true;
-    else room.players.delete(ws.id);
+    if (room.round?.snakes[p.id]) p.gone = true;
+    else room.players.delete(p.id);
   }
-  if (!room.clients.size) return closeRoom(room, 'empty');
-  if (room.host === ws) room.host = [...room.clients].find((c) => room.players.has(c.id)) ?? [...room.clients][0];
-  if (room.phase === 'lobby') room.players.forEach((p, id) => p.gone && room.players.delete(id));
+  if (!room.members.size) return closeRoom(room, 'empty');
+  if (room.hostId === s.id) room.hostId = ([...room.members].find((m) => room.players.has(m.id)) ?? [...room.members][0]).id;
   broadcast(room);
 }
 
-function enter(ws, room) {
-  leave(ws);
-  ws.room = room;
-  room.clients.add(ws);
-  send(ws, { t: 'you', id: ws.id, colors: COLORS });
+function enter(s, room) {
+  leave(s);
+  s.room = room;
+  room.members.add(s);
   broadcast(room);
 }
 
 const handlers = {
-  create(ws) {
-    if (rooms.size >= MAX_ROOMS) return send(ws, { t: 'error', msg: 'Server is full, try again later.' });
-    const room = { code: newCode(), clients: new Set(), players: new Map(), host: ws, phase: 'lobby' };
+  create(s) {
+    if (rooms.size >= MAX_ROOMS) return send(s, { t: 'error', msg: 'Server is full, try again later.' });
+    const room = { code: newCode(), members: new Set(), players: new Map(), hostId: s.id, phase: 'lobby' };
     rooms.set(room.code, room);
     openLobby(room);
-    enter(ws, room);
+    enter(s, room);
   },
-  watch(ws, { code }) {
+  watch(s, { code }) {
     const room = rooms.get(String(code ?? '').toUpperCase().trim());
-    if (!room) return send(ws, { t: 'error', msg: 'No room with that code.' });
-    enter(ws, room);
+    if (!room) return send(s, { t: 'error', msg: 'No room with that code.' });
+    enter(s, room);
   },
-  join(ws, { name, color }) {
-    const room = ws.room;
+  join(s, { name, color, key }) {
+    const room = s.room;
     if (!room) return;
     name = cleanName(name);
-    const players = [...room.players.values()];
+    // The raw key stays private to its browser; only its hash names the leaderboard entry.
+    const statsId = typeof key === 'string' && key.length >= 16 && key.length <= 64 ? crypto.createHash('sha256').update(key).digest('hex').slice(0, 32) : null;
+    const players = seated(room);
     let err;
-    if (room.players.has(ws.id)) err = 'You already joined.';
+    if (room.players.has(s.id)) err = 'You already joined.';
     else if (!name) err = 'Enter a name.';
-    else if (players.length >= COLORS.length) err = 'Room is full.';
+    else if (players.length >= MAX_PLAYERS) err = `Room is full (${MAX_PLAYERS} players max).`;
     else if (!COLORS.includes(color)) err = 'Pick a color.';
     else if (players.some((p) => p.color === color)) err = 'That color was just taken. Pick another.';
     else if (players.some((p) => p.name.toLowerCase() === name.toLowerCase())) err = 'That name is taken in this room.';
-    if (err) return send(ws, { t: 'error', msg: err });
+    if (err) return send(s, { t: 'error', msg: err });
     // Joining mid-match is allowed: you spectate until the next round.
-    room.players.set(ws.id, { id: ws.id, name, color, wins: 0, place: null });
+    room.players.set(s.id, { id: s.id, session: s, name, color, statsId, wins: 0, place: null });
     broadcast(room);
   },
-  start(ws) {
-    const room = ws.room;
-    if (room?.host !== ws || room.phase !== 'lobby') return;
-    if (room.players.size < 2) return send(ws, { t: 'error', msg: 'Need at least 2 players.' });
+  start(s) {
+    const room = s.room;
+    if (room?.hostId !== s.id || room.phase !== 'lobby') return;
+    if (room.players.size < 2) return send(s, { t: 'error', msg: 'Need at least 2 players.' });
     startMatch(room);
   },
-  rematch(ws) {
-    const room = ws.room;
-    if (room?.host !== ws || room.phase !== 'ended') return;
+  rematch(s) {
+    const room = s.room;
+    if (room?.hostId !== s.id || room.phase !== 'ended') return;
     openLobby(room);
     broadcast(room);
   },
-  turn(ws, { dir }) {
-    const room = ws.room;
-    if (room?.phase === 'playing') turn(room.round, ws.id, dir);
+  turn(s, { dir }) {
+    const room = s.room;
+    if (room?.phase === 'playing') turn(room.round, s.id, dir);
   },
   leave,
 };
 
+// A reconnecting client sends its resume token first; the session (seat, host role, snake) carries over.
+function resume(ws, token) {
+  const s = sessions.get(token);
+  if (!s?.room) return ws.send(JSON.stringify({ t: 'expired' }));
+  clearTimeout(s.timer);
+  if (s.ws && s.ws !== ws) {
+    s.ws.session = null;
+    s.ws.close();
+  }
+  s.ws = ws;
+  ws.session = s;
+  you(s);
+  broadcast(s.room);
+}
+
+function drop(s) {
+  s.ws = null;
+  if (!s.room) return sessions.delete(s.token);
+  // The snake keeps moving while its player is away; the seat is given up only after the grace period.
+  s.timer = setTimeout(() => {
+    sessions.delete(s.token);
+    leave(s);
+  }, GRACE_MS);
+  broadcast(s.room);
+}
+
 wss.on('connection', (ws) => {
-  ws.id = crypto.randomUUID().slice(0, 8);
   ws.alive = true;
   ws.on('pong', () => (ws.alive = true));
   ws.on('message', (data) => {
@@ -220,12 +281,19 @@ wss.on('connection', (ws) => {
     } catch {
       return;
     }
-    if (Object.hasOwn(handlers, msg?.t)) handlers[msg.t](ws, msg);
+    if (msg?.t === 'resume' && !ws.session) return resume(ws, String(msg.token));
+    if (!Object.hasOwn(handlers, msg?.t)) return;
+    if (!ws.session) {
+      ws.session = { id: crypto.randomUUID().slice(0, 8), token: crypto.randomBytes(16).toString('hex'), ws, room: null };
+      sessions.set(ws.session.token, ws.session);
+      you(ws.session);
+    }
+    handlers[msg.t](ws.session, msg);
   });
-  ws.on('close', () => leave(ws));
+  ws.on('close', () => ws.session && drop(ws.session));
 });
 
-// Drop dead connections so empty rooms close and the instance can scale to zero.
+// Drop dead connections so seats free up and the instance can scale to zero.
 setInterval(() => {
   for (const ws of wss.clients) {
     if (!ws.alive) ws.terminate();
