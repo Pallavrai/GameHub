@@ -2,7 +2,17 @@
 
 Play a quick game of Snake while a website loads, uploads, or processes. Click the GameHub icon, press **Play**, and a small game panel opens over the page — the website keeps working underneath.
 
-![Snake panel](docs/verification/panel-playing.png)
+<p align="center"><img src="docs/screenshots/playing.png" alt="Snake game panel during play" width="368"></p>
+
+## Screenshots
+
+| Game menu | Ready | Playing |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/menu.png" alt="GameHub toolbar menu with the Snake card and Play button" width="240"> | <img src="docs/screenshots/ready.png" alt="Snake panel showing Ready when you are and a Start button" width="240"> | <img src="docs/screenshots/playing.png" alt="Snake moving on the board with an apple" width="240"> |
+
+| Game over | Pages that block overlays |
+| :---: | :---: |
+| <img src="docs/screenshots/game-over.png" alt="Game over screen with a Play again button" width="240"> | <img src="docs/screenshots/restricted.png" alt="Menu explaining the page does not allow an overlay, with an Open in separate window button" width="240"> |
 
 ## Download
 
