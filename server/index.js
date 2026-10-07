@@ -59,6 +59,7 @@ function snapshot(room) {
     host: room.hostId,
     max: MAX_PLAYERS,
     tick: TICK_MS,
+    at: Date.now(), // server send time: clients play ticks back on a steady clock from this
     endsIn: room.deadline ? Math.max(0, room.deadline - Date.now()) : null,
     size: SIZE,
     winner: room.winner,
@@ -92,7 +93,7 @@ function setDeadline(room, ms, fn) {
 
 function closeRoom(room, reason) {
   clearTimeout(room.timer);
-  clearInterval(room.loop);
+  clearTimeout(room.loop);
   rooms.delete(room.code);
   for (const s of room.members) {
     send(s, { t: 'closed', reason });
@@ -104,7 +105,7 @@ function closeRoom(room, reason) {
 }
 
 function openLobby(room) {
-  clearInterval(room.loop);
+  clearTimeout(room.loop);
   room.phase = 'lobby';
   room.round = null;
   room.winner = null;
@@ -126,10 +127,14 @@ function startMatch(room) {
   room.startedAt = Date.now();
   for (const p of room.players.values()) p.place = null;
   room.round = startRound([...room.players.keys()]);
-  room.loop = setInterval(() => {
+  // Ticks are scheduled against the start time, so timer lateness never accumulates into drift.
+  const t0 = Date.now();
+  const tick = () => {
     placeDead(room, step(room.round));
     broadcast(room);
-  }, TICK_MS);
+    if (room.phase === 'playing') room.loop = setTimeout(tick, t0 + (room.round.tick + 1) * TICK_MS - Date.now());
+  };
+  room.loop = setTimeout(tick, TICK_MS);
   broadcast(room);
 }
 
@@ -142,7 +147,7 @@ function placeDead(room, dead) {
     if (p) p.place = left.length + 1;
   }
   if (left.length > 1) return;
-  clearInterval(room.loop);
+  clearTimeout(room.loop);
   room.phase = 'ended';
   const champ = left[0] && room.players.get(left[0]);
   if (champ) {

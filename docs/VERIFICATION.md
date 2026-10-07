@@ -141,3 +141,12 @@ Note: while cleaning up the test revision, live traffic briefly (about 2 min) po
 | On-screen step timing during a live match (guest page, 15 s) | min 120 / median 161 / max 221 ms, no steps under 100 ms (raw arrivals: min 77 ms) | `smooth.mjs` (session scratch) |
 | Server tests | PASS (13) | `server/server.test.js` |
 | us-central1 service deleted; only asia-south1 remains | PASS | `gcloud run services list` |
+
+## v1.2.2 — 2026-10-07
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| On-screen step timing, real extension on the live server, 3 × 30 s | p10–p90 157–163 ms; off-beat (>20 ms) 2, 2 and 6 of 186 steps | `smooth.mjs` (session scratch); v1.2.1 was 138–179 ms |
+| Panel suite incl. copy in iframe | PASS (30/30) | `tests/e2e.mjs` |
+| Multiplayer controls, live | PASS (27/27, two runs) | `tests/multiplayer-e2e.mjs` |
+| Server + engine tests | PASS (13 + 8) | |

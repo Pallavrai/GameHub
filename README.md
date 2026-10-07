@@ -16,16 +16,16 @@ Play a quick game of Snake while a website loads, uploads, or processes. Click t
 
 ## Download
 
-**[⬇ Download GameHub-1.2.1.zip](https://github.com/Pallavrai/GameHub/releases/latest/download/GameHub-1.2.1.zip)** · [all releases](https://github.com/Pallavrai/GameHub/releases)
+**[⬇ Download GameHub-1.2.2.zip](https://github.com/Pallavrai/GameHub/releases/latest/download/GameHub-1.2.2.zip)** · [all releases](https://github.com/Pallavrai/GameHub/releases)
 
 GameHub is not on the Chrome Web Store, so Chrome installs it in Developer mode (takes a minute).
 
 ## Install
 
-1. Download and unzip `GameHub-1.2.1.zip`. Move the `GameHub-1.2.1` folder somewhere permanent — Chrome loads it from that folder, so don't delete it.
+1. Download and unzip `GameHub-1.2.2.zip`. Move the `GameHub-1.2.2` folder somewhere permanent — Chrome loads it from that folder, so don't delete it.
 2. Open `chrome://extensions` in Chrome.
 3. Turn on **Developer mode** (top-right switch).
-4. Click **Load unpacked** and select the `GameHub-1.2.1` folder.
+4. Click **Load unpacked** and select the `GameHub-1.2.2` folder.
 5. Click the puzzle-piece icon in the toolbar and pin **GameHub**.
 
 Works in Chrome and other Chromium browsers (Edge, Brave, Arc) that support loading unpacked extensions.

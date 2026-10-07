@@ -117,9 +117,11 @@ export function mountMulti(container, { onExit }) {
   let lastPhase = null;
   let aim = null; // { dir, at }: your latest steer, drawn on your head before the server's tick moves you
   let localKey;
-  const pending = []; // states waiting for their slot on screen
+  const pending = []; // ticks waiting for their slot on screen
+  const lags = [];
+  let fastest = Infinity;
+  let margin = 60;
   let paceTimer = 0;
-  let shownAt = 0;
   let copiedTimer = 0;
 
   const el = (tag, cls, text) => {
@@ -211,28 +213,39 @@ export function mountMulti(container, { onExit }) {
       inRoom = true;
       if (lostAt || ref.status.textContent.startsWith('Connecting')) status();
       lostAt = attempt = 0;
-      pending.push(msg);
-      pace();
+      pace(msg);
     } else if (msg.t === 'error') status(msg.msg, true);
     else if (msg.t === 'expired') giveUp('You were disconnected too long and lost your seat.');
     else if (msg.t === 'closed') giveUp(msg.reason === 'empty' ? '' : msg.reason);
   }
 
-  // Internet jitter delivers ticks 70–250 ms apart; drawn on arrival the snake stutters and double-steps.
-  // Space in-game ticks at least 3/4 of a tick apart, and catch up at once if more than two pile up.
-  function pace() {
+  // Jitter buffer. The network delivers ticks 70–250 ms apart; drawn on arrival, the snake stutters.
+  // Each tick is shown at its server send time + the fastest delivery seen + a margin that covers 98% of the
+  // last 60 delays (one stall is ignored), so steps land on a steady 160 ms beat. Late beyond the margin: shown at once, margin grows.
+  function pace(msg) {
+    if (msg) {
+      if (msg.phase !== 'playing' || msg.at == null) {
+        pending.length = 0;
+        lags.length = 0;
+        fastest = Infinity;
+        return render(msg);
+      }
+      const lag = Date.now() - msg.at; // network delay + clock offset; the offset cancels against `fastest`
+      fastest = Math.min(fastest, lag);
+      lags.push(lag);
+      if (lags.length > 60) lags.shift();
+      const sorted = lags.map((l) => l - fastest).sort((x, y) => x - y);
+      margin = Math.min(200, sorted[Math.floor(sorted.length * 0.98)] + 10);
+      pending.push(msg);
+    }
     clearTimeout(paceTimer);
     while (pending.length) {
-      const next = pending[0];
-      const playing = next.phase === 'playing' && state?.phase === 'playing';
-      const wait = playing && pending.length < 3 ? shownAt + 0.75 * (next.tick ?? 160) - performance.now() : 0;
-      if (wait > 0) {
+      const wait = pending[0].at + fastest + margin - Date.now();
+      if (wait > 1 && pending.length < 4) {
         paceTimer = setTimeout(pace, wait);
         return;
       }
-      pending.shift();
-      shownAt = performance.now();
-      render(next);
+      render(pending.shift());
     }
   }
 

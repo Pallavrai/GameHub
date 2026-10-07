@@ -40,3 +40,7 @@ That revision is reachable at the `e2e---…` URL printed by the deploy and writ
 gcloud run services update gamehub-snake --project project-b323005a-fcb3-45ee-b4d --region asia-south1 --remove-env-vars STATS_COLLECTION,RANKED_MS
 gcloud run services update-traffic gamehub-snake --project project-b323005a-fcb3-45ee-b4d --region asia-south1 --to-latest --remove-tags e2e
 ```
+
+## Billing guard
+
+Budget `Card charge alert (after free credits)` on billing account `017392-527AEE-56AB56` (covers every linked project, including `pactsage`): ₹100 per month, measured **after** free-trial credits. Google emails the billing admins at ₹1, ₹50, ₹100 actual spend and when the month is forecast to pass ₹100. It only alerts and does not stop spending. The Budget API is enabled in `project-b323005a-fcb3-45ee-b4d`; pass `--billing-project` to `gcloud billing budgets` commands.

@@ -99,3 +99,11 @@ The user asked to use Vercel instead of GCP if possible, to stay free. Vercel's 
 - **Jerky movement**: measured state arrivals on the live server ranged 73–248 ms against a 160 ms tick. Drawing on arrival made the snake double-step or stall. The client now spaces in-game states at least 0.75 × tick apart and catches up at once if more than two are waiting. Measured on screen: minimum 120 ms, median 161 ms. A late packet still shows as a short pause; hiding that needs a playout buffer, which adds delay to every move, so it wasn't done.
 - **No layout jumps**: the scoreboard moved below the board and keeps join order (live rank reshuffled chips every tick). Status text moved to the bottom; during a match the reconnect notice uses the on-board banner.
 - **Turn queue 3 → 2**: a third buffered press replayed stale turns well after the key press, which felt like sudden movement.
+
+## 2026-10-07 — v1.2.2 jitter buffer (supersedes the ¾-tick spacing from v1.2.1)
+
+The owner still felt jitter, caused by late packets: spacing stopped double-steps but not pauses. Now:
+- The server schedules ticks against the match start time (no `setInterval` drift) and stamps every state with `at` (server send time).
+- The client shows each tick at `at + fastest delivery seen + margin`. The margin is the 98th percentile of the last 60 delays + 10 ms (max 200), so steps land on a steady 160 ms beat. More than 3 ticks queued → shown at once.
+- Cost: the screen runs behind the server by the margin (tens of ms on a good connection). Your own head still turns on key press.
+- Measured on screen (live, three 30 s matches): p10–p90 157–163 ms, 2–6 of 186 steps off by more than 20 ms (mostly the first second while the margin learns). Raw arrivals: p10–p90 141–180 ms. A network stall longer than the margin (one 1.4 s stall seen) still pauses and then catches up; no client-side fix can hide that.
