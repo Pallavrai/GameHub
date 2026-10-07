@@ -18,6 +18,12 @@ Updated: 2026-10-07. Stage: v1.0.0 complete and packaged; basic real-Chrome laun
 - v1.0.0 additions: opt-in synthesized sound (muted by default, saved), Space starts from Ready/Game over, `scripts/package.sh` builds `dist/GameHub-<version>.zip` with `INSTALL.txt`.
 - Tests: `tests/snake-engine.test.mjs` (8 rule tests) and `tests/e2e.mjs` (28 Chrome checks). Both pass; see `VERIFICATION.md`.
 
+## Published
+
+- Public repo: https://github.com/Pallavrai/GameHub (no license; all rights reserved by the owner's choice).
+- Release v1.0.0 with `GameHub-1.0.0.zip`: https://github.com/Pallavrai/GameHub/releases/tag/v1.0.0. The README download link uses `releases/latest/download/GameHub-1.0.0.zip`; update it when the zip name changes.
+- To release a new version: bump `extension/manifest.json`, run `./scripts/package.sh`, then `gh release create v<version> dist/GameHub-<version>.zip`.
+
 ## Deviations from PLAN.md
 
 No service worker, read-max-write best score, fewer files. Reasons are in `DECISIONS.md` (2026-10-07 entries after the asset decisions).
