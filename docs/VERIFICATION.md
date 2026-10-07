@@ -46,10 +46,10 @@ The two selected originals were copied into the project without resizing or edit
 
 ## Chrome end-to-end — 2026-10-07
 
-Command (paths are this machine's; see the header of `tests/e2e.mjs`):
+Command (see the header of `tests/e2e.mjs`):
 
 ```sh
-PLAYWRIGHT_DIR=~/.npm/_npx/a8a7eec953f1f314 CHROME_PATH="$HOME/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" node tests/e2e.mjs
+PLAYWRIGHT_DIR=<dir with node_modules/playwright> CHROME_PATH=<Chrome for Testing binary> node tests/e2e.mjs
 ```
 
 Environment: headless Chrome for Testing 153.0.8010.12, Playwright 1.63, 1280×800, local HTTP test page. Result: 28 PASS, 0 FAIL (rerun after v1.0.0 sound/Space changes).

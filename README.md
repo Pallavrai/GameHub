@@ -1,55 +1,69 @@
 # GameHub
 
-A Chrome extension for short games while a website is loading or a task is running. Click the extension, choose a game, and play in a small movable panel over the current page. Snake is the first game.
+Play a quick game of Snake while a website loads, uploads, or processes. Click the GameHub icon, press **Play**, and a small game panel opens over the page — the website keeps working underneath.
 
-## Current stage
+![Snake panel](docs/verification/panel-playing.png)
 
-Snake v1.0.0 is complete in `extension/`, checked by automated tests in Chrome for Testing and a real toolbar launch. Remaining manual checks are listed see [docs/VERIFICATION.md](docs/VERIFICATION.md).
+## Download
 
-## Install (unpacked)
+**[⬇ Download GameHub-1.0.0.zip](https://github.com/Pallavrai/GameHub/releases/latest/download/GameHub-1.0.0.zip)** · [all releases](https://github.com/Pallavrai/GameHub/releases)
 
-1. Open `chrome://extensions` and turn on Developer mode.
-2. Load unpacked → choose the `extension/` folder.
-3. Pin GameHub, open any normal website, click the icon, press Play.
+GameHub is not on the Chrome Web Store, so Chrome installs it in Developer mode (takes a minute).
 
-## Share it
+## Install
 
-```sh
-./scripts/package.sh
-```
+1. Download and unzip `GameHub-1.0.0.zip`. Move the `GameHub-1.0.0` folder somewhere permanent — Chrome loads it from that folder, so don't delete it.
+2. Open `chrome://extensions` in Chrome.
+3. Turn on **Developer mode** (top-right switch).
+4. Click **Load unpacked** and select the `GameHub-1.0.0` folder.
+5. Click the puzzle-piece icon in the toolbar and pin **GameHub**.
 
-Creates `dist/GameHub-<version>.zip` (git-ignored) containing the extension and `INSTALL.txt`. Recipients unzip it and use Load unpacked; there is no one-click install outside the Chrome Web Store.
+Works in Chrome and other Chromium browsers (Edge, Brave, Arc) that support loading unpacked extensions.
 
-## Tests
+## Play
 
-```sh
-node --test tests/*.test.mjs
-```
+1. Open any normal website.
+2. Click the GameHub icon → **Play**.
+3. Press **Start** (or Space).
 
-`tests/e2e.mjs` drives the extension in Chrome for Testing; its header lists the required environment variables.
-
-## Start here
-
-| File | Purpose |
+| Key | Action |
 | --- | --- |
-| [PLAN.md](PLAN.md) | Build order, architecture, scope, and acceptance criteria |
-| [AGENTS.md](AGENTS.md) | Instructions for any coding agent working in this folder |
-| [docs/PROJECT_MEMORY.md](docs/PROJECT_MEMORY.md) | User request, assumptions, and durable project context |
-| [docs/DECISIONS.md](docs/DECISIONS.md) | Technical decisions and their reasons |
-| [docs/DESIGN.md](docs/DESIGN.md) | Visual system, layouts, and Snake rules |
-| [assets/README.md](assets/README.md) | Asset inventory and usage instructions |
-| [docs/ASSET_PROMPTS.md](docs/ASSET_PROMPTS.md) | Reproducible image-generation prompts and provenance |
-| [docs/HANDOFF.md](docs/HANDOFF.md) | Current status and the next agent's starting point |
-| [docs/VERIFICATION.md](docs/VERIFICATION.md) | Asset checks, test results, and what is still untested |
+| Arrow keys / W A S D | Steer |
+| Space | Start, pause, resume |
+| Esc | Pause; press again to close |
 
-All durable project context belongs in this repository's Markdown files. Do not require another agent to read chat history or an external memory service.
+- Drag the panel by its header; **–** minimizes it to a small chip, **×** closes it.
+- Clicking the website or switching tabs pauses the game automatically. Nothing resumes until you press Resume.
+- Your best score is saved on your computer. Sound is off by default; use the speaker button to turn it on.
 
-## Platform limit
+## Good to know
 
-Chrome's toolbar popup closes when it loses focus. It is the launcher, while the game lives in a separate on-page panel. Some browser-owned tabs do not permit injected overlays; offer a separate game window on those tabs. An on-page panel is not an operating-system always-on-top window. See [the implementation plan](PLAN.md) for details and official references.
+- **Some pages can't show the panel**: the new-tab page, `chrome://` pages, and the Chrome Web Store block extensions. GameHub offers **Open in separate window** there instead.
+- **Reloading or leaving the page closes the game.** Open it again from the icon.
+- **Updating**: download the new zip, replace the folder, then click the reload icon on GameHub's card in `chrome://extensions`.
+- Chrome may show a "Developer mode extensions" notice on startup; that is normal for extensions installed this way.
 
-## Asset preparation
+## Privacy
 
-Editable SVG sources cover branding, Snake pieces, the board, and controls. Chrome manifest icons are supplied as PNGs at 16, 32, 48, and 128 pixels. AI artwork is decorative; it is not used for collision detection or tile geometry.
+GameHub has no account, ads, analytics, or network requests. It only touches a page when you click Play on it (`activeTab`), and it never reads the page's content. Permissions: `activeTab`, `scripting`, `storage`.
 
-Native vector assets are regenerated with `node scripts/generate-vector-assets.mjs`. PNG icon exports use `node scripts/export-icons.mjs` with the `sharp` package available. See [the asset guide](assets/README.md) for the portable dependency setup.
+## For developers
+
+```text
+extension/        the extension Chrome loads (no build step)
+tests/            engine tests and a Chrome end-to-end harness
+scripts/          asset generators and the release packager
+assets/           master artwork and sources
+docs/             plan, decisions, design, verification records
+```
+
+```sh
+node --test tests/*.test.mjs     # game rule tests
+./scripts/package.sh             # builds dist/GameHub-<version>.zip
+```
+
+Start with [AGENTS.md](AGENTS.md), [PLAN.md](PLAN.md), and [docs/HANDOFF.md](docs/HANDOFF.md). Test evidence and known untested scenarios are in [docs/VERIFICATION.md](docs/VERIFICATION.md).
+
+## License
+
+No license is granted. You may download and use the extension; the source code is © Pallav Rai, all rights reserved.
