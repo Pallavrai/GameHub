@@ -37,3 +37,12 @@ No service worker, read-max-write best score, fewer files. Reasons are in `DECIS
 ## Load it
 
 `chrome://extensions` → Developer mode → Load unpacked → select `extension/`.
+
+## 2026-10-07 multiplayer (v1.1.0)
+
+- `server/`: `rules.js` holds the pure rules (wrap, collisions, head-on, food per live snake). `index.js` handles rooms, the lobby timer, host-only start/rematch, the origin check and pings. Tests: `cd server && npm test` (7 pass). Deploy command: `server/README.md`.
+- Live at `wss://gamehub-snake-733095730479.us-central1.run.app`: Cloud Run service `gamehub-snake` in project `project-b323005a-fcb3-45ee-b4d`, region us-central1, min 0 / max 1 instance. The default compute service account was granted `roles/run.builder` in that project only, because source deploys failed without it.
+- `extension/games/snake/multi.js`: create/join room, lobby (code, copy, player list, colour swatches with taken colours disabled, countdown), live scoreboard, away/out/spectating banners, winner leaderboard. `game/shell.js` swaps it in from the Ready overlay's "Play multiplayer" button.
+- On a localhost page, `multi.js` uses `ws://localhost:8787`. Port 8080 belongs to the user's Adminer container.
+- Vercel was evaluated and rejected; see `DECISIONS.md`.
+- Next: test with two people on different machines; consider auto-reconnect if Cloud Run drops sockets after the 1 h request timeout.

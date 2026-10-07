@@ -5,7 +5,7 @@ const embedded = window.parent !== window;
 const entry = games.find((g) => g.id === new URLSearchParams(location.search).get('game'));
 
 const COPY = {
-  ready: ['Ready when you are', 'Start'],
+  ready: ['Ready when you are', 'Play single'],
   paused: ['Paused', 'Resume'],
   away: ["Paused while you're away", 'Resume'],
   over: ['Game over', 'Play again'],
@@ -16,6 +16,7 @@ let state = 'ready';
 let score = 0;
 let best = 0;
 let game;
+let single;
 let muted = true;
 let audio;
 
@@ -58,6 +59,7 @@ function setState(next) {
     $('message').textContent = next === 'over' || next === 'won' ? `${msg} · ${score} points` : msg;
     $('primary').textContent = label;
   }
+  $('multi').hidden = next !== 'ready';
   const resumable = next === 'paused' || next === 'away';
   $('pause').disabled = next !== 'playing' && !resumable;
   $('pause').querySelector('span').textContent = resumable ? 'Resume' : 'Pause';
@@ -107,7 +109,24 @@ function onEnd(result) {
   saveBest();
 }
 
+// Multiplayer replaces the single-player shell in this same document, so the panel and its ready handshake stay untouched.
+async function startMulti() {
+  game.destroy();
+  setState('multi');
+  const { mountMulti } = await import('../games/snake/multi.js');
+  $('shell').hidden = true;
+  game = mountMulti(document.body, {
+    onExit: () => {
+      game.destroy();
+      $('shell').hidden = false;
+      mountSingle();
+      setState('ready');
+    },
+  });
+}
+
 function onKey(e) {
+  if (state === 'multi') return; // multi.js owns keys; Escape must not close mid-match
   if (e.key === 'Escape') {
     if (state === 'playing') pause();
     else close();
@@ -118,13 +137,10 @@ function onKey(e) {
   }
 }
 
-async function init() {
-  if (!entry) {
-    $('message').textContent = 'Unknown game.';
-    return;
-  }
-  const mod = await entry.load();
-  game = mod.mount($('game'), {
+function mountSingle() {
+  score = 0;
+  $('score').textContent = 0;
+  game = single.mount($('game'), {
     controls: $('dpad'),
     onScore: (s) => {
       if (s > score) beep([880], 0.06);
@@ -133,8 +149,18 @@ async function init() {
     },
     onEnd,
   });
+}
+
+async function init() {
+  if (!entry) {
+    $('message').textContent = 'Unknown game.';
+    return;
+  }
+  single = await entry.load();
+  mountSingle();
   $('primary').disabled = false;
   $('primary').addEventListener('click', play);
+  $('multi').addEventListener('click', startMulti);
   $('pause').addEventListener('click', () => (state === 'playing' ? pause() : play()));
   $('restart').addEventListener('click', restart);
   $('sound').addEventListener('click', toggleSound);

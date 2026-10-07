@@ -16,16 +16,16 @@ Play a quick game of Snake while a website loads, uploads, or processes. Click t
 
 ## Download
 
-**[⬇ Download GameHub-1.0.0.zip](https://github.com/Pallavrai/GameHub/releases/latest/download/GameHub-1.0.0.zip)** · [all releases](https://github.com/Pallavrai/GameHub/releases)
+**[⬇ Download GameHub-1.1.0.zip](https://github.com/Pallavrai/GameHub/releases/latest/download/GameHub-1.1.0.zip)** · [all releases](https://github.com/Pallavrai/GameHub/releases)
 
 GameHub is not on the Chrome Web Store, so Chrome installs it in Developer mode (takes a minute).
 
 ## Install
 
-1. Download and unzip `GameHub-1.0.0.zip`. Move the `GameHub-1.0.0` folder somewhere permanent — Chrome loads it from that folder, so don't delete it.
+1. Download and unzip `GameHub-1.1.0.zip`. Move the `GameHub-1.1.0` folder somewhere permanent — Chrome loads it from that folder, so don't delete it.
 2. Open `chrome://extensions` in Chrome.
 3. Turn on **Developer mode** (top-right switch).
-4. Click **Load unpacked** and select the `GameHub-1.0.0` folder.
+4. Click **Load unpacked** and select the `GameHub-1.1.0` folder.
 5. Click the puzzle-piece icon in the toolbar and pin **GameHub**.
 
 Works in Chrome and other Chromium browsers (Edge, Brave, Arc) that support loading unpacked extensions.
@@ -34,7 +34,7 @@ Works in Chrome and other Chromium browsers (Edge, Brave, Arc) that support load
 
 1. Open any normal website.
 2. Click the GameHub icon → **Play**.
-3. Press **Start** (or Space).
+3. Press **Play single** (or Space), or **Play multiplayer** to play friends online.
 
 | Key | Action |
 | --- | --- |
@@ -46,6 +46,14 @@ Works in Chrome and other Chromium browsers (Edge, Brave, Arc) that support load
 - Clicking the website or switching tabs pauses the game automatically. Nothing resumes until you press Resume.
 - Your best score is saved on your computer. Sound is off by default; use the speaker button to turn it on.
 
+## Multiplayer
+
+1. **Play multiplayer** → **Create room**. Share the 5-letter room code.
+2. Friends choose **Play multiplayer**, enter the code, and pick a name and a snake colour. Colours already taken are crossed out.
+3. The host presses **Start**. If they forget, the game starts automatically after 5 minutes once 2 or more players have joined.
+
+Rules: the edges wrap around. Hit any snake (yours or someone else's) and you're out and watch the rest. If two heads collide, both snakes die; if they were the last two, they share #1. The last snake alive rules the room's leaderboard, and the host can start a rematch. In multiplayer, clicking away from the game does **not** pause it; your snake keeps moving.
+
 ## Good to know
 
 - **Some pages can't show the panel**: the new-tab page, `chrome://` pages, and the Chrome Web Store block extensions. GameHub offers **Open in separate window** there instead.
@@ -55,7 +63,7 @@ Works in Chrome and other Chromium browsers (Edge, Brave, Arc) that support load
 
 ## Privacy
 
-GameHub has no account, ads, analytics, or network requests. It only touches a page when you click Play on it (`activeTab`), and it never reads the page's content. Permissions: `activeTab`, `scripting`, `storage`.
+GameHub has no account, ads, or analytics. Single-player makes no network requests. Multiplayer connects to the GameHub game server (Google Cloud Run) and sends only your room code, chosen name, colour, and steering; nothing is stored after the room closes. It only touches a page when you click Play on it (`activeTab`), and it never reads the page's content. Permissions: `activeTab`, `scripting`, `storage`.
 
 ## For developers
 
@@ -64,11 +72,13 @@ extension/        the extension Chrome loads (no build step)
 tests/            engine tests and a Chrome end-to-end harness
 scripts/          asset generators and the release packager
 assets/           master artwork and sources
+server/           multiplayer WebSocket server (Node, deployed to Cloud Run)
 docs/             plan, decisions, design, verification records
 ```
 
 ```sh
 node --test tests/*.test.mjs     # game rule tests
+(cd server && npm test)          # multiplayer rules and server tests
 ./scripts/package.sh             # builds dist/GameHub-<version>.zip
 ```
 

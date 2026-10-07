@@ -63,3 +63,20 @@ It resets `left`/`top` with `!important` and beats the inline position, so the p
 - Sound: square-wave Web Audio cues (eat, game over, win), muted by default, saved as `settings.muted` in `chrome.storage.local`. The AudioContext is created only after a player click. No audio files.
 - Space starts a game from Ready and Game over as well as toggling pause, so a run can be played from the keyboard alone.
 - Sharing: `scripts/package.sh` zips `extension/` with an `INSTALL.txt`. `dist/` is git-ignored because it is rebuilt from source.
+
+## 2026-10-07 — Online multiplayer Snake (supersedes "no backend / no network" for multiplayer only)
+
+User request: the Snake menu offers Play single / Play multiplayer. Multiplayer uses a room code; the host starts the match, with a 5-minute auto-start in case the host forgets; joiners pick a name and a colour, and taken colours are disabled. Edges wrap. Hitting any snake (another snake or your own) kills you and you spectate. Head-on crashes kill both snakes. If the last two crash head-on, they share #1 and nobody gets a win (the user specified this). The last snake alive wins and is shown on a per-room leaderboard with a win tally.
+
+- **Authoritative server** (`server/`, Node + `ws`): clients only send turns, and the server decides moves and deaths, so browsers can't disagree about who died. Single-player stays fully local.
+- **Host: GCP Cloud Run**, in project `project-b323005a-fcb3-45ee-b4d` ("My First Project"), not `pactsage`, so the user's existing app is not touched. The free-trial billing account is the only billing used. Vercel was rejected because its functions can't hold WebSockets.
+- **`--max-instances 1`**: rooms live in memory, so a second instance would split rooms. `ponytail:` comment in `server/index.js`, upgrade path: Redis.
+- **Cost guard**: `--min-instances 0`, rooms close 5 min after a match with no rematch, lobbies close after 5 min with fewer than 2 players, and a 30 s ping drops dead sockets. An open socket keeps the instance billed, so idle rooms must end.
+- **Focus loss in multiplayer**: the snake keeps moving, and an "away" banner is shown. The user chose this; single-player still pauses.
+- **Leaderboard is per room** (user choice). No database, no accounts.
+- **Origin check**: only `chrome-extension://<id>` and `http://localhost` pages may connect. It filters random websites; it is not authentication.
+- No new extension permissions. Extension pages may open WebSockets under the default MV3 CSP.
+
+## 2026-10-07 — Vercel rejected for the game server
+
+The user asked to use Vercel instead of GCP if possible, to stay free. Vercel's WebSocket docs (Beta) say new connections are not guaranteed to reach the same function instance, and rooms must live in an external store. Function duration limits also close sockets. The in-memory authoritative room with its tick loop would break (players with the same code landing on different instances). Cloud Run with max 1 instance fits, and its always-free monthly allowance covers this scale.

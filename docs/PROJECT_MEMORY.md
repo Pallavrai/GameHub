@@ -48,3 +48,7 @@ The asset-and-plan stage is complete. Runtime assets: 22 native SVGs, four Chrom
 ## 2026-10-07 implementation
 
 The user asked to continue building. Phases 1–3 of `../PLAN.md` are implemented in `../extension/` with automated Chrome checks. Working assumptions above are still unconfirmed by the user; the implementation follows them. Status lives in `HANDOFF.md`.
+
+## 2026-10-07 multiplayer requirement
+
+The user asked for online multiplayer Snake. The rules are in the matching `DECISIONS.md` entry. Multiplayer needs network access to the GameHub server on GCP Cloud Run; single-player still works offline. Do not deploy into GCP project `pactsage`, which holds the user's existing app. Stay within the free-trial billing account.

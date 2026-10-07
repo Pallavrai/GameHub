@@ -103,3 +103,16 @@ Bugs found and fixed by this run: panel rendered off-screen (`all: initial !impo
 | Offline after install | All code and assets are local; not run offline |
 | Screen reader announcement of outcomes | `aria-live` present, not heard |
 | Sound cues audible and not too loud | Headless run cannot hear audio |
+
+## Multiplayer — 2026-10-07
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Rules: wrap, body hit, head-on both die, last-two head-on → no survivor, food per snake | PASS | `server/server.test.js` |
+| Socket flow: web origin refused, taken colour rejected, non-host can't start, leaver dies and stays on board, winner gets place 1 + win | PASS | `server/server.test.js` (real server process) |
+| Ready overlay shows Play single / Play multiplayer; lobby, live board, winner screen render | PASS | Built-in browser, page served from localhost, local server, plus a script player |
+| Live Cloud Run server: web origin refused, taken colour rejected, ~15 ticks/2 s, leaver placed #2, winner gets a win | PASS | Script client against `wss://gamehub-snake-…run.app` (first connect ~1 s) |
+| Loaded extension in Chrome for Testing, two extension pages on the live server: create, code join (lowercase), host colour disabled, guest has no Start, countdown, scoreboard, winner screen, back to single | PASS (7/7) | Playwright run; `docs/verification/mp-*.png` |
+| Single-player regression: `tests/e2e.mjs` after the multiplayer change | PASS (28/28) | Run 2026-10-07 |
+| Socket kept open past Cloud Run's 1 h timeout | NOT TESTED | Server closes rooms well before that in normal play |
+| Two real people on different machines | NOT TESTED | |
