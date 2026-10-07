@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GameHub</title>
+  <link rel="stylesheet" href="shell.css">
+  <script type="module" src="shell.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <div class="scores">
+      <span>Score <b id="score">0</b></span>
+      <span class="right">
+        <button class="icon" id="sound" aria-label="Sound" aria-pressed="false"><img src="/assets/ui/sound-off.svg" alt=""></button>
+        <span><img src="/assets/ui/trophy.svg" alt=""> Best <b id="best">0</b></span>
+      </span>
+    </div>
+    <div class="stage" id="stage" tabindex="-1">
+      <div id="game"></div>
+      <div class="overlay" id="overlay">
+        <img class="mascot" src="/assets/art/snake-mascot.png" alt="">
+        <p id="message">Loading…</p>
+        <button class="primary" id="primary" disabled>Start</button>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="actions">
+        <button id="pause" disabled><img src="/assets/ui/pause.svg" alt=""><span>Pause</span></button>
+        <button id="restart"><img src="/assets/ui/restart.svg" alt=""><span>Restart</span></button>
+      </div>
+      <div class="dpad" id="dpad"></div>
+    </div>
+    <p class="hint">Arrows/WASD steer · Space play/pause · Esc ×2 close</p>
+    <p class="sr-only" id="announce" aria-live="polite"></p>
+  </main>
+</body>
+</html>

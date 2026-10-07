@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "GameHub",
+  "version": "1.0.0",
+  "description": "Play a quick game in a small panel while a website does its thing.",
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "GameHub",
+    "default_icon": { "16": "assets/icons/icon-16.png", "32": "assets/icons/icon-32.png" }
+  },
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "web_accessible_resources": [
+    { "resources": ["game/index.html"], "matches": ["http://*/*", "https://*/*"] }
+  ]
+}

@@ -1,0 +1,53 @@
+:root {
+  color-scheme: dark;
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  width: 300px;
+  margin: 0;
+  padding: 16px;
+  background: #10161f;
+  color: #f2f7fa;
+}
+header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+h1 { margin: 0; font-size: 18px; }
+header p { margin: 0; color: #a9bacb; font-size: 13px; }
+
+.card {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 4px 12px;
+  padding: 12px;
+  border: 1px solid #253747;
+  border-radius: 12px;
+  background: #18232f;
+}
+.card img { grid-row: span 3; width: 64px; height: 64px; border-radius: 8px; object-fit: cover; }
+.card h2 { margin: 0; font-size: 16px; }
+.card p { margin: 0; color: #a9bacb; font-size: 13px; }
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid #253747;
+  border-radius: 8px;
+  background: #18232f;
+  color: #f2f7fa;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+button img { width: 18px; height: 18px; }
+button:focus-visible { outline: 2px solid #89e66b; outline-offset: 2px; }
+button:disabled { opacity: 0.6; cursor: default; }
+.play { justify-self: start; margin-top: 4px; background: #89e66b; border-color: #89e66b; color: #10161f; }
+
+#problem { margin-top: 12px; }
+#problem[hidden] { display: none; }
+#status { margin: 0 0 8px; color: #ffb3b3; }
+#problem button { width: 100%; }

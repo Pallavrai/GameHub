@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GameHub — Snake asset gallery</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #10161f; color: #f2f7fa; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 1080px; margin: auto; padding: 32px 24px 48px; }
+    header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+    header img { width: 56px; height: 56px; }
+    h1 { font-size: 26px; margin: 0 0 6px; }
+    h2 { font-size: 18px; margin: 32px 0 14px; }
+    p { color: #a9bacb; line-height: 1.5; margin: 0; }
+    .art-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    figure { margin: 0; background: #18232f; border: 1px solid #253747; border-radius: 14px; overflow: hidden; }
+    .art-grid img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; background: #111b24; }
+    figcaption { padding: 12px 16px; font-size: 13px; color: #a9bacb; }
+    figcaption strong { display: block; color: #f2f7fa; margin-bottom: 4px; }
+    .sheet { display: block; width: 100%; border-radius: 16px; }
+    .tiles { display: flex; flex-wrap: wrap; gap: 16px; }
+    .tile { width: 128px; padding: 16px 8px 10px; text-align: center; }
+    .tile img { display: block; width: 64px; height: 64px; margin: 0 auto 12px; }
+    .tile figcaption { padding: 0; font-size: 11px; }
+    .board-row { display: flex; align-items: flex-start; gap: 24px; }
+    .board-row img { width: min(320px, 100%); height: auto; border: 1px solid #253747; border-radius: 8px; }
+    .board-row p { max-width: 440px; font-size: 14px; }
+    .icon-row { display: flex; flex-wrap: wrap; gap: 16px; }
+    .icon { min-width: 120px; min-height: 160px; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+    .icon img { object-fit: contain; }
+    .icon figcaption { padding: 12px 0 0; }
+    footer { margin-top: 32px; border-top: 1px solid #253747; padding-top: 20px; font-size: 13px; }
+    a { color: #89e66b; }
+    @media (max-width: 600px) { .art-grid { grid-template-columns: 1fr; } .board-row { flex-direction: column; } main { padding: 24px 16px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <img src="brand/gamehub-mark.svg" alt="GameHub gamepad mark">
+      <div><h1>GameHub · Snake assets</h1><p>Asset gallery and design reference. The extension is not implemented yet.</p></div>
+    </header>
+    <div class="art-grid">
+      <figure><img src="art/snake-cover.png" alt="Green segmented snake approaching a red apple on a dark grid"><figcaption><strong>Menu cover</strong>AI-generated artwork. Labels and Play remain real HTML.</figcaption></figure>
+      <figure><img src="art/snake-mascot.png" alt="Friendly green snake and red apple with a transparent background"><figcaption><strong>Ready / Paused mascot</strong>AI-generated PNG with transparency, shown here on a dark surface.</figcaption></figure>
+    </div>
+    <h2>Brand and controls</h2>
+    <img class="sheet" src="native-preview.png" alt="GameHub brand, connected Snake pieces, apple, and fifteen control icons">
+    <h2>Gameplay pieces</h2>
+    <div class="tiles">
+      <figure class="tile"><img src="snake/head-east.svg" alt="Snake head pointing east"><figcaption>head-east.svg</figcaption></figure>
+      <figure class="tile"><img src="snake/body-horizontal.svg" alt="Horizontal body"><figcaption>body-horizontal.svg</figcaption></figure>
+      <figure class="tile"><img src="snake/corner-ne.svg" alt="Body turn connecting north and east"><figcaption>corner-ne.svg</figcaption></figure>
+      <figure class="tile"><img src="snake/tail-east.svg" alt="Tail with body connection toward east"><figcaption>tail-east.svg</figcaption></figure>
+      <figure class="tile"><img src="snake/apple.svg" alt="Red apple food"><figcaption>apple.svg</figcaption></figure>
+    </div>
+    <h2>Board</h2>
+    <div class="board-row"><img src="snake/board.svg" alt="Dark twenty by twenty Snake grid"><p>20×20 logical cells. This source is 320×320 pixels; the future renderer can redraw the grid at the device pixel ratio. Board size never changes the gameplay rules.</p></div>
+    <h2>Chrome icon exports · actual dimensions</h2>
+    <div class="icon-row">
+      <figure class="icon"><img src="icons/icon-16.png" width="16" height="16" alt="16 pixel GameHub icon"><figcaption>16×16</figcaption></figure>
+      <figure class="icon"><img src="icons/icon-32.png" width="32" height="32" alt="32 pixel GameHub icon"><figcaption>32×32</figcaption></figure>
+      <figure class="icon"><img src="icons/icon-48.png" width="48" height="48" alt="48 pixel GameHub icon"><figcaption>48×48</figcaption></figure>
+      <figure class="icon"><img src="icons/icon-128.png" width="128" height="128" alt="128 pixel GameHub icon"><figcaption>128×128</figcaption></figure>
+    </div>
+    <footer><p>Read the <a href="README.md">asset inventory</a>, <a href="../PLAN.md">implementation plan</a>, and <a href="../docs/HANDOFF.md">agent handoff</a>. This gallery has no game loop or extension behavior.</p></footer>
+  </main>
+</body>
+</html>
